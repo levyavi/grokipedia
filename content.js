@@ -26,20 +26,30 @@ function convertToGrokipediaUrl(wikiUrl) {
 async function checkGrokipediaExists(grokipediaUrl) {
   // Check local cache first
   if (linkCache.has(grokipediaUrl)) {
-    return linkCache.get(grokipediaUrl);
+    const cached = linkCache.get(grokipediaUrl);
+    console.log('[Grokipedia] Using cached result for:', grokipediaUrl, '->', cached);
+    return cached;
   }
 
   try {
+    console.log('[Grokipedia] Checking if exists:', grokipediaUrl);
     const response = await chrome.runtime.sendMessage({
       action: 'checkGrokipedia',
       grokipediaUrl: grokipediaUrl
     });
     
+    if (chrome.runtime.lastError) {
+      console.error('[Grokipedia] Runtime error:', chrome.runtime.lastError.message);
+      linkCache.set(grokipediaUrl, false);
+      return false;
+    }
+    
     const exists = response?.exists || false;
+    console.log('[Grokipedia] Check result for', grokipediaUrl, '->', exists);
     linkCache.set(grokipediaUrl, exists);
     return exists;
   } catch (error) {
-    console.error('Error checking Grokipedia link:', error);
+    console.error('[Grokipedia] Error checking link:', error);
     linkCache.set(grokipediaUrl, false);
     return false;
   }
@@ -136,6 +146,8 @@ async function processWikipediaLink(link) {
   // Mark as processing to avoid duplicate checks
   link.dataset.grokipediaProcessed = 'processing';
   
+  console.log('[Grokipedia] Processing link:', wikiUrl, '-> Grokipedia:', grokipediaUrl);
+  
   try {
     // Check if Grokipedia page exists
     const exists = await checkGrokipediaExists(grokipediaUrl);
@@ -145,13 +157,14 @@ async function processWikipediaLink(link) {
       link.href = grokipediaUrl;
       link.dataset.grokipediaProcessed = 'true';
       link.dataset.originalWikiUrl = wikiUrl;
-      console.log('[Grokipedia] Replaced:', wikiUrl, '->', grokipediaUrl);
+      console.log('[Grokipedia] ✓ Replaced:', wikiUrl, '->', grokipediaUrl);
     } else {
       // Keep the original link, mark as processed
       link.dataset.grokipediaProcessed = 'true';
+      console.log('[Grokipedia] ✗ Page not found, keeping original:', wikiUrl);
     }
   } catch (error) {
-    console.error('Error processing Wikipedia link:', error);
+    console.error('[Grokipedia] Error processing Wikipedia link:', error);
     link.dataset.grokipediaProcessed = 'true';
   }
 }
@@ -162,10 +175,16 @@ function processAllWikipediaLinks() {
   const links = document.querySelectorAll('a:not([data-grokipedia-processed="true"]):not([data-grokipedia-processed="processing"])');
   
   let foundCount = 0;
+  const foundWikiLinks = [];
+  
   links.forEach(link => {
     const href = link.getAttribute('href') || link.getAttribute('data-href') || '';
     // Check if it's a Wikipedia link or Google redirect to Wikipedia
     if (href.includes('wikipedia.org/wiki/') || (href.includes('/url?q=') && href.includes('wikipedia.org'))) {
+      const extracted = extractWikipediaUrl(link);
+      if (extracted) {
+        foundWikiLinks.push(extracted);
+      }
       foundCount++;
       processWikipediaLink(link);
     }
@@ -173,6 +192,7 @@ function processAllWikipediaLinks() {
   
   if (foundCount > 0) {
     console.log(`[Grokipedia] Found ${foundCount} Wikipedia link(s) to process`);
+    console.log('[Grokipedia] Wikipedia links:', foundWikiLinks);
   }
 }
 
