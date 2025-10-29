@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Wikipedia to Grokipedia Link Replacer",
+  "version": "1.0.0",
+  "description": "Replaces Wikipedia links with Grokipedia links if the corresponding page exists on Grokipedia",
+  "permissions": [],
+  "host_permissions": [
+    "*://*.wikipedia.org/*",
+    "*://grokipedia.com/*",
+    "*://*.grokipedia.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

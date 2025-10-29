@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+
+- When working on the Main branch - After every operation do git commit. Also when another branch is merged to Main do a git commit.
+- When working on a feature branch - do a git commit only when explictily asked.
