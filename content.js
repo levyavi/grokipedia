@@ -32,12 +32,10 @@ async function checkGrokipediaExists(grokipediaUrl) {
   // Check local cache first
   if (linkCache.has(grokipediaUrl)) {
     const cached = linkCache.get(grokipediaUrl);
-    console.log('[Grokipedia] Using cached result for:', grokipediaUrl, '->', cached);
     return cached;
   }
 
   try {
-    console.log('[Grokipedia] Checking if exists:', grokipediaUrl);
     const response = await chrome.runtime.sendMessage({
       action: 'checkGrokipedia',
       grokipediaUrl: grokipediaUrl
@@ -50,7 +48,6 @@ async function checkGrokipediaExists(grokipediaUrl) {
     }
     
     const exists = response?.exists || false;
-    console.log('[Grokipedia] Check result for', grokipediaUrl, '->', exists);
     linkCache.set(grokipediaUrl, exists);
     return exists;
   } catch (error) {
@@ -151,8 +148,6 @@ async function processWikipediaLink(link) {
   // Mark as processing to avoid duplicate checks
   link.dataset.grokipediaProcessed = 'processing';
   
-  console.log('[Grokipedia] Processing link:', wikiUrl, '-> Grokipedia:', grokipediaUrl);
-  
   try {
     // Check if Grokipedia page exists
     const exists = await checkGrokipediaExists(grokipediaUrl);
@@ -162,11 +157,9 @@ async function processWikipediaLink(link) {
       link.href = grokipediaUrl;
       link.dataset.grokipediaProcessed = 'true';
       link.dataset.originalWikiUrl = wikiUrl;
-      console.log('[Grokipedia] ✓ Replaced:', wikiUrl, '->', grokipediaUrl);
     } else {
       // Keep the original link, mark as processed
       link.dataset.grokipediaProcessed = 'true';
-      console.log('[Grokipedia] ✗ Page not found, keeping original:', wikiUrl);
     }
   } catch (error) {
     console.error('[Grokipedia] Error processing Wikipedia link:', error);
@@ -195,10 +188,6 @@ function processAllWikipediaLinks() {
     }
   });
   
-  if (foundCount > 0) {
-    console.log(`[Grokipedia] Found ${foundCount} Wikipedia link(s) to process`);
-    console.log('[Grokipedia] Wikipedia links:', foundWikiLinks);
-  }
 }
 
 // Use MutationObserver to handle dynamically loaded content
@@ -254,8 +243,6 @@ function init() {
     return;
   }
 
-  console.log('[Grokipedia] Extension initialized on', window.location.hostname);
-  
   // Process existing links immediately
   processAllWikipediaLinks();
   

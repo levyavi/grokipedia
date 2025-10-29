@@ -60,11 +60,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'checkGrokipedia') {
     const { grokipediaUrl } = request;
     
-    console.log('[Grokipedia Background] Received request to check:', grokipediaUrl);
-    
     // Use async/await pattern
     checkGrokipediaExists(grokipediaUrl).then(exists => {
-      console.log('[Grokipedia Background] Sending response:', grokipediaUrl, '->', exists);
       sendResponse({ exists });
     }).catch(error => {
       console.error('[Grokipedia Background] Error in checkGrokipedia:', error);

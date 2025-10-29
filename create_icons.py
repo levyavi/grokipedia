@@ -10,8 +10,9 @@ def create_icon(size, filename):
     draw = ImageDraw.Draw(img)
     
     # Try to use a nice font, fallback to default if not available
+    # Use larger font to fill more space
     try:
-        font_size = size // 3
+        font_size = int(size * 0.5)  # 50% of icon size for bigger text
         font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
     except:
         try:
@@ -19,18 +20,19 @@ def create_icon(size, filename):
         except:
             font = ImageFont.load_default()
     
-    # Calculate positions (centered vertically)
+    # Calculate positions - spread out more to edges, minimize empty space
     text_y = size // 2
-    w_x = size // 4
-    g_x = size * 3 // 4
+    # Move 'w' closer to left edge, 'g' closer to right edge
+    w_x = size // 6  # Closer to left
+    g_x = size * 5 // 6  # Closer to right
     arrow_x = size // 2
     
     # Draw 'w' on the left (blue color like Wikipedia)
     draw.text((w_x, text_y), 'w', fill=(66, 133, 244, 255), font=font, anchor='mm')
     
-    # Draw arrow '->' in the middle
-    arrow_thickness = max(2, size // 32)
-    arrow_length = size // 6
+    # Draw arrow '->' in the middle - make it smaller to allow bigger text
+    arrow_thickness = max(1, size // 40)
+    arrow_length = size // 8
     # Horizontal line
     draw.line([(arrow_x - arrow_length//2, text_y), (arrow_x + arrow_length//2, text_y)], 
               fill=(128, 128, 128, 255), width=arrow_thickness)
