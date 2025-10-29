@@ -9,7 +9,12 @@ function convertToGrokipediaUrl(wikiUrl) {
   try {
     const url = new URL(wikiUrl);
     // Extract the article path (e.g., /wiki/Article_Name)
-    const articlePath = url.pathname;
+    let articlePath = url.pathname;
+    
+    // Convert /wiki/Article_Name to /page/Article_Name
+    if (articlePath.startsWith('/wiki/')) {
+      articlePath = articlePath.replace('/wiki/', '/page/');
+    }
     
     // Preserve hash if present
     const hash = url.hash;
