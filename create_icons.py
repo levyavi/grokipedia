@@ -1,51 +1,50 @@
 #!/usr/bin/env python3
-"""Create icon files for Chrome extension with 'w -> g' design"""
+"""Create icon files for Chrome extension with 'g on w' design"""
 
 from PIL import Image, ImageDraw, ImageFont
 
 def create_icon(size, filename):
-    """Create an icon image with 'w -> g' design"""
-    # Create a new image with white background (better visibility)
+    """Create an icon image with bold 'g' on top of light 'w' design"""
+    # Create a new image with white background
     img = Image.new('RGBA', (size, size), (255, 255, 255, 255))
     draw = ImageDraw.Draw(img)
     
     # Try to use a nice font, fallback to default if not available
-    # Use larger font to fill more space
     try:
-        font_size = int(size * 0.5)  # 50% of icon size for bigger text
+        # Large font size for the letters to fill most of the space
+        font_size = int(size * 0.65)
         font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
+        font_bold = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", font_size)
     except:
         try:
             font = ImageFont.truetype("arial.ttf", font_size)
+            font_bold = ImageFont.truetype("arialbd.ttf", font_size)
         except:
+            # If bold font not available, use regular with thicker stroke
             font = ImageFont.load_default()
+            font_bold = font
     
-    # Calculate positions - spread out more to edges, minimize empty space
-    text_y = size // 2
-    # Move 'w' closer to left edge, 'g' closer to right edge
-    w_x = size // 6  # Closer to left
-    g_x = size * 5 // 6  # Closer to right
-    arrow_x = size // 2
+    # Center position
+    center_x = size // 2
+    center_y = size // 2
     
-    # Draw 'w' on the left (blue color like Wikipedia)
-    draw.text((w_x, text_y), 'w', fill=(66, 133, 244, 255), font=font, anchor='mm')
+    # Draw light 'w' as background/base (light gray, semi-transparent)
+    draw.text((center_x, center_y), 'w', fill=(200, 200, 200, 200), font=font, anchor='mm')
     
-    # Draw arrow '->' in the middle - make it smaller to allow bigger text
-    arrow_thickness = max(1, size // 40)
-    arrow_length = size // 8
-    # Horizontal line
-    draw.line([(arrow_x - arrow_length//2, text_y), (arrow_x + arrow_length//2, text_y)], 
-              fill=(128, 128, 128, 255), width=arrow_thickness)
-    # Arrow head
-    arrow_head_size = max(arrow_length // 3, 2)
-    draw.polygon([
-        (arrow_x + arrow_length//2, text_y),
-        (arrow_x + arrow_length//2 - arrow_head_size, text_y - arrow_head_size),
-        (arrow_x + arrow_length//2 - arrow_head_size, text_y + arrow_head_size)
-    ], fill=(128, 128, 128, 255))
+    # Draw bold 'g' on top (bold, darker, more opaque)
+    # Slightly offset upward for better visual separation
+    draw.text((center_x, center_y - size // 12), 'g', fill=(52, 168, 83, 255), font=font_bold, anchor='mm')
     
-    # Draw 'g' on the right (green color)
-    draw.text((g_x, text_y), 'g', fill=(52, 168, 83, 255), font=font, anchor='mm')
+    # If bold font not available, draw the 'g' with a thicker outline
+    if font_bold == font:
+        # Draw multiple slightly offset versions to simulate bold
+        for offset_x in range(-1, 2):
+            for offset_y in range(-1, 2):
+                if offset_x != 0 or offset_y != 0:
+                    draw.text((center_x + offset_x, center_y - size // 12 + offset_y), 
+                             'g', fill=(52, 168, 83, 200), font=font, anchor='mm')
+        # Draw the main 'g' on top
+        draw.text((center_x, center_y - size // 12), 'g', fill=(52, 168, 83, 255), font=font, anchor='mm')
     
     # Save as PNG
     img.save(filename, 'PNG')
