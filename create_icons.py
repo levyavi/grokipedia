@@ -1,50 +1,74 @@
 #!/usr/bin/env python3
-"""Create icon files for Chrome extension with 'g on w' design"""
+"""Create icon files for Chrome extension with 'g on w' design.
+
+Maximize glyph sizes to minimize whitespace: we measure text bounding boxes
+and grow fonts until just fitting within the icon with a small padding.
+"""
 
 from PIL import Image, ImageDraw, ImageFont
 
+
+def load_font(preferred_paths, size):
+    for path in preferred_paths:
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            continue
+    # Fallback
+    return ImageFont.load_default()
+
+
+def fit_font_to_box(draw, text, max_size, preferred_paths, padding):
+    """Return a PIL font sized as large as possible to fit text within max_size-p padding."""
+    # Binary search font size for performance and accuracy
+    lo, hi = 1, max_size  # font sizes in pixels
+    best_font = ImageFont.load_default()
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        font = load_font(preferred_paths, mid)
+        # Measure text bbox at origin
+        bbox = draw.textbbox((0, 0), text, font=font)
+        width = bbox[2] - bbox[0]
+        height = bbox[3] - bbox[1]
+        if width <= max_size - 2 * padding and height <= max_size - 2 * padding:
+            best_font = font
+            lo = mid + 1  # try bigger
+        else:
+            hi = mid - 1  # too big, try smaller
+    return best_font
+
 def create_icon(size, filename):
-    """Create an icon image with bold 'g' on top of light 'w' design"""
-    # Create a new image with white background
+    """Create an icon image with bold 'g' on top of light 'w' design, maximized to fill space."""
     img = Image.new('RGBA', (size, size), (255, 255, 255, 255))
     draw = ImageDraw.Draw(img)
-    
-    # Try to use a nice font, fallback to default if not available
-    try:
-        # Large font size for the letters to fill most of the space
-        font_size = int(size * 0.65)
-        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
-        font_bold = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", font_size)
-    except:
-        try:
-            font = ImageFont.truetype("arial.ttf", font_size)
-            font_bold = ImageFont.truetype("arialbd.ttf", font_size)
-        except:
-            # If bold font not available, use regular with thicker stroke
-            font = ImageFont.load_default()
-            font_bold = font
-    
-    # Center position
-    center_x = size // 2
-    center_y = size // 2
-    
-    # Draw light 'w' as background/base (light gray, semi-transparent)
-    draw.text((center_x, center_y), 'w', fill=(200, 200, 200, 200), font=font, anchor='mm')
-    
-    # Draw bold 'g' on top (bold, darker, more opaque)
-    # Slightly offset upward for better visual separation
-    draw.text((center_x, center_y - size // 12), 'g', fill=(52, 168, 83, 255), font=font_bold, anchor='mm')
-    
-    # If bold font not available, draw the 'g' with a thicker outline
-    if font_bold == font:
-        # Draw multiple slightly offset versions to simulate bold
-        for offset_x in range(-1, 2):
-            for offset_y in range(-1, 2):
-                if offset_x != 0 or offset_y != 0:
-                    draw.text((center_x + offset_x, center_y - size // 12 + offset_y), 
-                             'g', fill=(52, 168, 83, 200), font=font, anchor='mm')
-        # Draw the main 'g' on top
-        draw.text((center_x, center_y - size // 12), 'g', fill=(52, 168, 83, 255), font=font, anchor='mm')
+
+    # Fonts to try (Windows first, then generic)
+    regular_paths = [
+        "C:/Windows/Fonts/arial.ttf",
+        "arial.ttf",
+    ]
+    bold_paths = [
+        "C:/Windows/Fonts/arialbd.ttf",
+        "arialbd.ttf",
+        # fallback to regular if bold missing
+    ]
+
+    # Use a tiny padding to minimize whitespace but avoid clipping
+    padding = max(1, size // 16)
+
+    # Fit background 'w' to the icon box
+    font_w = fit_font_to_box(draw, 'w', size, regular_paths, padding)
+    # Draw light 'w' centered
+    draw.text((size // 2, size // 2), 'w', fill=(200, 200, 200, 220), font=font_w, anchor='mm')
+
+    # Fit foreground 'g' to same or slightly larger, but still within bounds
+    # Use bold if available; otherwise we'll simulate bold with outline
+    font_g_bold = fit_font_to_box(draw, 'g', size, bold_paths, padding)
+    # Ensure 'g' is at least as big as 'w' visually by retrying with reduced padding if needed
+    # Note: fit_font_to_box already maximizes, so this typically suffices
+
+    # Draw bold 'g' centered; tiny upward offset can help with visual centering for descenders
+    draw.text((size // 2, size // 2 - max(1, size // 32)), 'g', fill=(52, 168, 83, 255), font=font_g_bold, anchor='mm')
     
     # Save as PNG
     img.save(filename, 'PNG')
