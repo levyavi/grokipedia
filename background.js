@@ -5,6 +5,11 @@ const GROKIPEDIA_BASE_URL = 'https://grokipedia.com';
 const linkCache = new Map();
 const CACHE_DURATION = 1000 * 60 * 60; // 1 hour cache
 
+const NOT_FOUND_MARKERS = [
+  "Article not found",
+  "This page doesn't exist... yet"
+];
+
 // Check if a Grokipedia page exists
 async function checkGrokipediaExists(grokipediaUrl) {
   // Check cache first
@@ -23,22 +28,33 @@ async function checkGrokipediaExists(grokipediaUrl) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
+    // Use GET so we can detect soft-404 pages that still return 200
     const response = await fetch(grokipediaUrl, {
-      method: 'HEAD',
+      method: 'GET',
       signal: controller.signal,
       redirect: 'follow'
     });
 
     clearTimeout(timeoutId);
-    
-    const exists = response.ok && response.status === 200;
-    
-    // Cache the result
-    linkCache.set(grokipediaUrl, {
-      exists,
-      timestamp: Date.now()
-    });
-    
+
+    if (!response.ok) {
+      linkCache.set(grokipediaUrl, { exists: false, timestamp: Date.now() });
+      return false;
+    }
+
+    // If redirected to a non-article path, consider it not found
+    const finalUrl = response.url || grokipediaUrl;
+    if (!finalUrl.includes('/page/')) {
+      linkCache.set(grokipediaUrl, { exists: false, timestamp: Date.now() });
+      return false;
+    }
+
+    // Read a small portion of the body to detect soft 404 markers
+    const text = (await response.text()).slice(0, 8000);
+    const soft404 = NOT_FOUND_MARKERS.some(marker => text.includes(marker));
+    const exists = !soft404;
+
+    linkCache.set(grokipediaUrl, { exists, timestamp: Date.now() });
     return exists;
   } catch (error) {
     // Network error, timeout, or other issue - assume page doesn't exist
